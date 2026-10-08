@@ -1,0 +1,54 @@
+#include <DHT.h>
+#include <math.h>
+
+// Pin configuration
+#define DHTPIN 2          // Digital pin connected to Pin 2 of the raw DHT11
+#define DHTTYPE DHT11     // Specifying the sensor type
+
+DHT dht(DHTPIN, DHTTYPE);
+
+unsigned long lastMillis = 0;
+const unsigned long interval = 5000; // Sample every 5 seconds (5000 ms)
+
+void setup() {
+  Serial.begin(9600);
+  dht.begin();
+  
+  // Print header for easy copy-pasting into Excel/MATLAB
+  Serial.println("Time(s),Temp(C),RH(%),AbsoluteHumidity(g/m3)");
+}
+
+void loop() {
+  unsigned long currentMillis = millis();
+  
+  // Check if it's time to read the sensor
+  if (currentMillis - lastMillis >= interval) {
+    lastMillis = currentMillis;
+    
+    // Read raw values from DHT11
+    float t = dht.readTemperature();
+    float rh = dht.readHumidity();
+    
+    // Check if any reads failed
+    if (isnan(t) || isnan(rh)) {
+      Serial.println("Error: Failed to read from DHT11 sensor!");
+      return;
+    }
+    
+    // Calculate Absolute Humidity using the Tetens Equation
+    // AH = (6.112 * e^((17.67 * T)/(T + 243.5)) * RH * 2.1674) / (273.15 + T)
+    float absoluteHumidity = (6.112 * exp((17.67 * t) / (t + 243.5)) * rh * 2.1674) / (273.15 + t);
+    
+    // Get timestamp in seconds
+    float timestamp = currentMillis / 1000.0;
+    
+    // Output comma-separated values to the Serial Monitor
+    Serial.print(timestamp, 1);
+    Serial.print(",");
+    Serial.print(t, 1);
+    Serial.print(",");
+    Serial.print(rh, 1);
+    Serial.print(",");
+    Serial.println(absoluteHumidity, 3);
+  }
+}
